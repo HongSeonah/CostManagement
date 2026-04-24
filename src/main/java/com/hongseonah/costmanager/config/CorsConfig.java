@@ -24,7 +24,9 @@ public class CorsConfig {
                                 "http://127.0.0.1:5173",
                                 "http://localhost:3000",
                                 "http://127.0.0.1:3000",
-                                "http://localhost:4173"
+                                "http://localhost:4173",
+                                "https://*.vercel.app",
+                                "http://*.vercel.app"
                         )
                         .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
                         .allowedHeaders("*")
@@ -42,7 +44,9 @@ public class CorsConfig {
                 "http://127.0.0.1:5173",
                 "http://localhost:3000",
                 "http://127.0.0.1:3000",
-                "http://localhost:4173"
+                "http://localhost:4173",
+                "https://*.vercel.app",
+                "http://*.vercel.app"
         ));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
