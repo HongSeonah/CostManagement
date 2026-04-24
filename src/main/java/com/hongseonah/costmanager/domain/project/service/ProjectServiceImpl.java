@@ -1,6 +1,7 @@
 package com.hongseonah.costmanager.domain.project.service;
 
 import com.hongseonah.costmanager.common.exception.BusinessException;
+import com.hongseonah.costmanager.common.response.PageResponse;
 import com.hongseonah.costmanager.domain.businessunit.entity.BusinessUnit;
 import com.hongseonah.costmanager.domain.businessunit.repository.BusinessUnitRepository;
 import com.hongseonah.costmanager.domain.project.dto.request.ProjectCreateRequest;
@@ -8,7 +9,7 @@ import com.hongseonah.costmanager.domain.project.dto.request.ProjectUpdateReques
 import com.hongseonah.costmanager.domain.project.dto.response.ProjectResponse;
 import com.hongseonah.costmanager.domain.project.entity.CostProject;
 import com.hongseonah.costmanager.domain.project.repository.ProjectRepository;
-import java.util.List;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,13 +26,19 @@ public class ProjectServiceImpl implements ProjectService {
     }
 
     @Override
-    public List<ProjectResponse> findAll(Long businessUnitId) {
-        if (businessUnitId == null) {
-            return projectRepository.findAll().stream().map(ProjectResponse::from).toList();
-        }
-        return projectRepository.findByBusinessUnitId(businessUnitId).stream()
-                .map(ProjectResponse::from)
-                .toList();
+    public PageResponse<ProjectResponse> findAll(Long businessUnitId, int page, int size) {
+        var pageable = PageRequest.of(page, size);
+        var result = businessUnitId == null
+                ? projectRepository.findAll(pageable)
+                : projectRepository.findByBusinessUnitId(businessUnitId, pageable);
+
+        return new PageResponse<>(
+                result.getContent().stream().map(ProjectResponse::from).toList(),
+                result.getNumber(),
+                result.getSize(),
+                result.getTotalElements(),
+                result.getTotalPages()
+        );
     }
 
     @Override

@@ -1,12 +1,12 @@
 package com.hongseonah.costmanager.domain.project.controller;
 
 import com.hongseonah.costmanager.common.response.ApiResponse;
+import com.hongseonah.costmanager.common.response.PageResponse;
 import com.hongseonah.costmanager.domain.project.dto.request.ProjectCreateRequest;
 import com.hongseonah.costmanager.domain.project.dto.request.ProjectUpdateRequest;
 import com.hongseonah.costmanager.domain.project.dto.response.ProjectResponse;
 import com.hongseonah.costmanager.domain.project.service.ProjectService;
 import jakarta.validation.Valid;
-import java.util.List;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -28,8 +28,10 @@ public class ProjectController {
     }
 
     @GetMapping
-    public ApiResponse<List<ProjectResponse>> findAll(@RequestParam(required = false) Long businessUnitId) {
-        return ApiResponse.success(projectService.findAll(businessUnitId));
+    public ApiResponse<PageResponse<ProjectResponse>> findAll(@RequestParam(required = false) Long businessUnitId,
+                                                              @RequestParam(defaultValue = "0") int page,
+                                                              @RequestParam(defaultValue = "10") int size) {
+        return ApiResponse.success(projectService.findAll(businessUnitId, page, size));
     }
 
     @GetMapping("/{id}")

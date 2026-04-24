@@ -2,6 +2,8 @@ package com.hongseonah.costmanager.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -10,6 +12,27 @@ import java.util.List;
 
 @Configuration
 public class CorsConfig {
+
+    @Bean
+    public WebMvcConfigurer webMvcConfigurer() {
+        return new WebMvcConfigurer() {
+            @Override
+            public void addCorsMappings(CorsRegistry registry) {
+                registry.addMapping("/api/**")
+                        .allowedOriginPatterns(
+                                "http://localhost:5173",
+                                "http://127.0.0.1:5173",
+                                "http://localhost:3000",
+                                "http://127.0.0.1:3000",
+                                "http://localhost:4173"
+                        )
+                        .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
+                        .allowedHeaders("*")
+                        .allowCredentials(false)
+                        .maxAge(3600);
+            }
+        };
+    }
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
