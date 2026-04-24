@@ -5,11 +5,20 @@ import com.hongseonah.costmanager.domain.businessunit.repository.BusinessUnitRep
 import com.hongseonah.costmanager.domain.entry.entity.CostEntry;
 import com.hongseonah.costmanager.domain.entry.entity.CostEntryCategory;
 import com.hongseonah.costmanager.domain.entry.repository.CostEntryRepository;
+import com.hongseonah.costmanager.domain.employee.entity.Employee;
+import com.hongseonah.costmanager.domain.employee.entity.EmployeeStatus;
+import com.hongseonah.costmanager.domain.employee.repository.EmployeeRepository;
+import com.hongseonah.costmanager.domain.internaltransfer.entity.InternalTransfer;
+import com.hongseonah.costmanager.domain.internaltransfer.repository.InternalTransferRepository;
 import com.hongseonah.costmanager.domain.project.entity.CostProject;
 import com.hongseonah.costmanager.domain.project.entity.ProjectStatus;
 import com.hongseonah.costmanager.domain.project.repository.ProjectRepository;
+import com.hongseonah.costmanager.domain.standardcost.entity.StandardCostBasisType;
+import com.hongseonah.costmanager.domain.standardcost.entity.StandardCostPlan;
+import com.hongseonah.costmanager.domain.standardcost.repository.StandardCostPlanRepository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -23,9 +32,15 @@ public class DataInitializer {
     @Bean
     CommandLineRunner seed(BusinessUnitRepository businessUnitRepository,
                            ProjectRepository projectRepository,
-                           CostEntryRepository costEntryRepository) {
+                           CostEntryRepository costEntryRepository,
+                           EmployeeRepository employeeRepository,
+                           InternalTransferRepository internalTransferRepository,
+                           StandardCostPlanRepository standardCostPlanRepository) {
         return args -> {
-            if (businessUnitRepository.count() > 0 || projectRepository.count() > 0) {
+            String currentMonth = YearMonth.now().toString();
+            if (businessUnitRepository.count() > 0 || projectRepository.count() > 0
+                    || costEntryRepository.count() > 0 || employeeRepository.count() > 0 || internalTransferRepository.count() > 0
+                    || standardCostPlanRepository.count() > 0) {
                 return;
             }
 
@@ -85,6 +100,34 @@ public class DataInitializer {
                     ProjectStatus.ACTIVE, "26000000", LocalDate.now().minusWeeks(6), LocalDate.now().plusMonths(4)));
 
             projectRepository.saveAll(projects.values());
+
+            employeeRepository.saveAll(List.of(
+                    createEmployee("EMP-001", "김유진", "책임자", businessUnits.get(0), projects.get("PRJ-001"), EmployeeStatus.ACTIVE, "3800000"),
+                    createEmployee("EMP-002", "박서준", "대리", businessUnits.get(0), projects.get("PRJ-002"), EmployeeStatus.ACTIVE, "3200000"),
+                    createEmployee("EMP-003", "이민호", "과장", businessUnits.get(1), projects.get("PRJ-005"), EmployeeStatus.ACTIVE, "3600000"),
+                    createEmployee("EMP-004", "정다은", "주임", businessUnits.get(1), projects.get("PRJ-006"), EmployeeStatus.ACTIVE, "2900000"),
+                    createEmployee("EMP-005", "최예린", "책임자", businessUnits.get(2), projects.get("PRJ-009"), EmployeeStatus.ACTIVE, "4100000"),
+                    createEmployee("EMP-006", "한지훈", "사원", businessUnits.get(2), null, EmployeeStatus.ON_LEAVE, "2500000"),
+                    createEmployee("EMP-007", "오세훈", "과장", businessUnits.get(3), projects.get("PRJ-013"), EmployeeStatus.ACTIVE, "4300000"),
+                    createEmployee("EMP-008", "문수아", "대리", businessUnits.get(3), projects.get("PRJ-014"), EmployeeStatus.ACTIVE, "3400000"),
+                    createEmployee("EMP-009", "윤지호", "책임자", businessUnits.get(4), projects.get("PRJ-017"), EmployeeStatus.ACTIVE, "4800000"),
+                    createEmployee("EMP-010", "신예은", "사원", businessUnits.get(4), projects.get("PRJ-020"), EmployeeStatus.ACTIVE, "2700000")
+            ));
+
+            internalTransferRepository.saveAll(List.of(
+                    createTransfer("TRF-001", LocalDate.now().minusDays(10), businessUnits.get(0), businessUnits.get(1), projects.get("PRJ-001"), projects.get("PRJ-005"), "1500000", "전략본부 기술 지원"),
+                    createTransfer("TRF-002", LocalDate.now().minusDays(8), businessUnits.get(2), businessUnits.get(3), projects.get("PRJ-009"), projects.get("PRJ-013"), "900000", "운영 자동화 지원"),
+                    createTransfer("TRF-003", LocalDate.now().minusDays(6), businessUnits.get(4), businessUnits.get(0), projects.get("PRJ-017"), projects.get("PRJ-002"), "1200000", "디지털 인력 지원"),
+                    createTransfer("TRF-004", LocalDate.now().minusDays(4), businessUnits.get(1), businessUnits.get(4), projects.get("PRJ-008"), projects.get("PRJ-020"), "700000", "영업 데이터 지원")
+            ));
+
+            standardCostPlanRepository.saveAll(List.of(
+                    createStandardCost("STD-001", currentMonth, businessUnits.get(0), null, StandardCostBasisType.BUSINESS_UNIT, "12000000", "전략본부 표준원가"),
+                    createStandardCost("STD-002", currentMonth, businessUnits.get(1), null, StandardCostBasisType.BUSINESS_UNIT, "9800000", "영업본부 표준원가"),
+                    createStandardCost("STD-003", currentMonth, businessUnits.get(2), null, StandardCostBasisType.BUSINESS_UNIT, "11200000", "운영본부 표준원가"),
+                    createStandardCost("STD-004", currentMonth, businessUnits.get(3), null, StandardCostBasisType.BUSINESS_UNIT, "10100000", "재무본부 표준원가"),
+                    createStandardCost("STD-005", currentMonth, businessUnits.get(4), null, StandardCostBasisType.BUSINESS_UNIT, "13800000", "디지털혁신본부 표준원가")
+            ));
 
             saveEntry(costEntryRepository, projects.get("PRJ-001"), LocalDate.now().minusDays(8),
                     CostEntryCategory.PERSONNEL, "기획 인력 투입", "원가 기준 정리", "4200000");
@@ -165,5 +208,62 @@ public class DataInitializer {
 
     private void updateSpent(CostProject project, BigDecimal amount) {
         project.setSpentAmount(project.getSpentAmount().add(amount));
+    }
+
+    private Employee createEmployee(String employeeCode,
+                                    String employeeName,
+                                    String positionName,
+                                    BusinessUnit businessUnit,
+                                    CostProject assignedProject,
+                                    EmployeeStatus status,
+                                    String monthlyLaborCost) {
+        Employee employee = new Employee();
+        employee.setEmployeeCode(employeeCode);
+        employee.setEmployeeName(employeeName);
+        employee.setPositionName(positionName);
+        employee.setBusinessUnit(businessUnit);
+        employee.setAssignedProject(assignedProject);
+        employee.setStatus(status);
+        employee.setMonthlyLaborCost(new BigDecimal(monthlyLaborCost));
+        employee.setJoinedDate(LocalDate.now().minusMonths(6));
+        return employee;
+    }
+
+    private InternalTransfer createTransfer(String transferCode,
+                                            LocalDate transferDate,
+                                            BusinessUnit sourceBusinessUnit,
+                                            BusinessUnit targetBusinessUnit,
+                                            CostProject sourceProject,
+                                            CostProject targetProject,
+                                            String amount,
+                                            String memo) {
+        InternalTransfer transfer = new InternalTransfer();
+        transfer.setTransferCode(transferCode);
+        transfer.setTransferDate(transferDate);
+        transfer.setSourceBusinessUnit(sourceBusinessUnit);
+        transfer.setTargetBusinessUnit(targetBusinessUnit);
+        transfer.setSourceProject(sourceProject);
+        transfer.setTargetProject(targetProject);
+        transfer.setAmount(new BigDecimal(amount));
+        transfer.setMemo(memo);
+        return transfer;
+    }
+
+    private StandardCostPlan createStandardCost(String standardCode,
+                                                String planMonth,
+                                                BusinessUnit businessUnit,
+                                                CostProject project,
+                                                StandardCostBasisType basisType,
+                                                String amount,
+                                                String memo) {
+        StandardCostPlan plan = new StandardCostPlan();
+        plan.setStandardCode(standardCode);
+        plan.setPlanMonth(planMonth);
+        plan.setBusinessUnit(businessUnit);
+        plan.setProject(project);
+        plan.setBasisType(basisType);
+        plan.setStandardAmount(new BigDecimal(amount));
+        plan.setMemo(memo);
+        return plan;
     }
 }
