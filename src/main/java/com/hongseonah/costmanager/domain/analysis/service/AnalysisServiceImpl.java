@@ -9,6 +9,7 @@ import com.hongseonah.costmanager.domain.employee.repository.EmployeeRepository;
 import com.hongseonah.costmanager.domain.internaltransfer.repository.InternalTransferRepository;
 import com.hongseonah.costmanager.domain.project.entity.ProjectStatus;
 import com.hongseonah.costmanager.domain.project.repository.ProjectRepository;
+import com.hongseonah.costmanager.domain.standardcost.entity.StandardCostBasisType;
 import com.hongseonah.costmanager.domain.standardcost.repository.StandardCostPlanRepository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -82,10 +83,6 @@ public class AnalysisServiceImpl implements AnalysisService {
                                     && employee.getBusinessUnit().getId().equals(unit.getId())
                                     && employee.getStatus() != EmployeeStatus.LEFT)
                             .toList();
-                    var unitStandards = standardPlans.stream()
-                            .filter(plan -> plan.getBusinessUnit() != null
-                                    && plan.getBusinessUnit().getId().equals(unit.getId()))
-                            .toList();
                     var outgoingTransfers = transfers.stream()
                             .filter(transfer -> transfer.getSourceBusinessUnit() != null
                                     && transfer.getSourceBusinessUnit().getId().equals(unit.getId()))
@@ -103,7 +100,8 @@ public class AnalysisServiceImpl implements AnalysisService {
                     BigDecimal laborCost = unitEmployees.stream()
                             .map(employee -> safe(employee.getMonthlyLaborCost()))
                             .reduce(BigDecimal.ZERO, BigDecimal::add);
-                    BigDecimal standardCost = unitStandards.stream()
+                    BigDecimal standardCost = standardPlans.stream()
+                            .filter(plan -> belongsToUnit(plan, unit))
                             .map(plan -> safe(plan.getStandardAmount()))
                             .reduce(BigDecimal.ZERO, BigDecimal::add);
                     BigDecimal transferInAmount = incomingTransfers.stream()
@@ -170,5 +168,15 @@ public class AnalysisServiceImpl implements AnalysisService {
 
     private BigDecimal safe(BigDecimal value) {
         return value == null ? BigDecimal.ZERO : value;
+    }
+
+    private boolean belongsToUnit(com.hongseonah.costmanager.domain.standardcost.entity.StandardCostPlan plan,
+                                  com.hongseonah.costmanager.domain.businessunit.entity.BusinessUnit unit) {
+        if (plan.getBasisType() == StandardCostBasisType.PROJECT && plan.getProject() != null) {
+            return plan.getProject().getBusinessUnit() != null
+                    && plan.getProject().getBusinessUnit().getId().equals(unit.getId());
+        }
+        return plan.getBusinessUnit() != null
+                && plan.getBusinessUnit().getId().equals(unit.getId());
     }
 }

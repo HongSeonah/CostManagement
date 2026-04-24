@@ -11,6 +11,9 @@ import com.hongseonah.costmanager.domain.businessunit.repository.BusinessUnitRep
 import com.hongseonah.costmanager.domain.entry.entity.CostEntry;
 import com.hongseonah.costmanager.domain.entry.entity.CostEntryCategory;
 import com.hongseonah.costmanager.domain.entry.repository.CostEntryRepository;
+import com.hongseonah.costmanager.domain.employee.entity.Employee;
+import com.hongseonah.costmanager.domain.employee.entity.EmployeeStatus;
+import com.hongseonah.costmanager.domain.employee.repository.EmployeeRepository;
 import com.hongseonah.costmanager.domain.project.entity.CostProject;
 import com.hongseonah.costmanager.domain.project.entity.ProjectStatus;
 import com.hongseonah.costmanager.domain.project.repository.ProjectRepository;
@@ -51,15 +54,18 @@ public class AllocationServiceImpl implements AllocationService {
 
     private final BusinessUnitRepository businessUnitRepository;
     private final ProjectRepository projectRepository;
+    private final EmployeeRepository employeeRepository;
     private final CostEntryRepository costEntryRepository;
     private final MonthlySettlementRepository monthlySettlementRepository;
 
     public AllocationServiceImpl(BusinessUnitRepository businessUnitRepository,
                                  ProjectRepository projectRepository,
+                                 EmployeeRepository employeeRepository,
                                  CostEntryRepository costEntryRepository,
                                  MonthlySettlementRepository monthlySettlementRepository) {
         this.businessUnitRepository = businessUnitRepository;
         this.projectRepository = projectRepository;
+        this.employeeRepository = employeeRepository;
         this.costEntryRepository = costEntryRepository;
         this.monthlySettlementRepository = monthlySettlementRepository;
     }
@@ -73,6 +79,7 @@ public class AllocationServiceImpl implements AllocationService {
 
         List<BusinessUnit> businessUnits = businessUnitRepository.findAll();
         List<CostProject> projects = projectRepository.findAll();
+        List<Employee> employees = employeeRepository.findAll();
         List<CostEntry> entries = costEntryRepository.findByEntryDateBetween(start, end);
 
         Map<Long, BigDecimal> directCostByUnit = new LinkedHashMap<>();
@@ -107,6 +114,12 @@ public class AllocationServiceImpl implements AllocationService {
         long totalActiveProjects = projects.stream()
                 .filter(project -> project.getStatus() == ProjectStatus.ACTIVE)
                 .count();
+        long totalActiveEmployees = employees.stream()
+                .filter(employee -> employee.getStatus() != EmployeeStatus.LEFT)
+                .count();
+        BigDecimal totalBudget = projects.stream()
+                .map(project -> safe(project.getBudgetAmount()))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
         BigDecimal finalSharedCostTotal = sharedCostTotal;
 
         List<BusinessUnitAllocationResponse> unitSummaries = businessUnits.stream()
@@ -115,13 +128,30 @@ public class AllocationServiceImpl implements AllocationService {
                             .filter(project -> project.getBusinessUnit() != null
                                     && project.getBusinessUnit().getId().equals(unit.getId()))
                             .toList();
+                    List<Employee> unitEmployees = employees.stream()
+                            .filter(employee -> employee.getBusinessUnit() != null
+                                    && employee.getBusinessUnit().getId().equals(unit.getId())
+                                    && employee.getStatus() != EmployeeStatus.LEFT)
+                            .toList();
 
                     long projectCount = unitProjects.size();
                     long activeProjectCount = unitProjects.stream()
                             .filter(project -> project.getStatus() == ProjectStatus.ACTIVE)
                             .count();
+                    long employeeCount = unitEmployees.size();
+                    BigDecimal unitBudget = unitProjects.stream()
+                            .map(project -> safe(project.getBudgetAmount()))
+                            .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-                    BigDecimal shareRate = resolveShareRate(totalActiveProjects, businessUnits, activeProjectCount);
+                    BigDecimal shareRate = resolveShareRate(
+                            totalActiveProjects,
+                            totalActiveEmployees,
+                            totalBudget,
+                            businessUnits,
+                            activeProjectCount,
+                            employeeCount,
+                            unitBudget
+                    );
                     BigDecimal allocatedSharedCost = finalSharedCostTotal
                             .multiply(shareRate)
                             .setScale(2, RoundingMode.HALF_UP);
@@ -224,16 +254,49 @@ public class AllocationServiceImpl implements AllocationService {
     }
 
     private BigDecimal resolveShareRate(long totalActiveProjects,
+                                        long totalActiveEmployees,
+                                        BigDecimal totalBudget,
                                         List<BusinessUnit> businessUnits,
-                                        long activeProjectCount) {
+                                        long activeProjectCount,
+                                        long employeeCount,
+                                        BigDecimal unitBudget) {
+        BigDecimal weightedRate = BigDecimal.ZERO;
+        BigDecimal activeWeight = BigDecimal.ZERO;
+
         if (totalActiveProjects > 0) {
-            return BigDecimal.valueOf(activeProjectCount)
-                    .divide(BigDecimal.valueOf(totalActiveProjects), 6, RoundingMode.HALF_UP);
+            weightedRate = weightedRate.add(
+                    componentRate(activeProjectCount, totalActiveProjects).multiply(BigDecimal.valueOf(0.5))
+            );
+            activeWeight = activeWeight.add(BigDecimal.valueOf(0.5));
+        }
+        if (totalActiveEmployees > 0) {
+            weightedRate = weightedRate.add(
+                    componentRate(employeeCount, totalActiveEmployees).multiply(BigDecimal.valueOf(0.3))
+            );
+            activeWeight = activeWeight.add(BigDecimal.valueOf(0.3));
+        }
+        if (totalBudget.compareTo(BigDecimal.ZERO) > 0) {
+            weightedRate = weightedRate.add(
+                    unitBudget.divide(totalBudget, 6, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(0.2))
+            );
+            activeWeight = activeWeight.add(BigDecimal.valueOf(0.2));
+        }
+
+        if (activeWeight.compareTo(BigDecimal.ZERO) > 0) {
+            return weightedRate.divide(activeWeight, 6, RoundingMode.HALF_UP);
         }
         if (businessUnits.isEmpty()) {
             return BigDecimal.ZERO;
         }
         return BigDecimal.ONE.divide(BigDecimal.valueOf(businessUnits.size()), 6, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal componentRate(long numerator, long denominator) {
+        if (denominator <= 0) {
+            return BigDecimal.ZERO;
+        }
+        return BigDecimal.valueOf(numerator)
+                .divide(BigDecimal.valueOf(denominator), 6, RoundingMode.HALF_UP);
     }
 
     private BigDecimal safe(BigDecimal value) {

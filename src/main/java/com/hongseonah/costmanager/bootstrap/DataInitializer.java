@@ -126,7 +126,12 @@ public class DataInitializer {
                     createStandardCost("STD-002", currentMonth, businessUnits.get(1), null, StandardCostBasisType.BUSINESS_UNIT, "9800000", "영업본부 표준원가"),
                     createStandardCost("STD-003", currentMonth, businessUnits.get(2), null, StandardCostBasisType.BUSINESS_UNIT, "11200000", "운영본부 표준원가"),
                     createStandardCost("STD-004", currentMonth, businessUnits.get(3), null, StandardCostBasisType.BUSINESS_UNIT, "10100000", "재무본부 표준원가"),
-                    createStandardCost("STD-005", currentMonth, businessUnits.get(4), null, StandardCostBasisType.BUSINESS_UNIT, "13800000", "디지털혁신본부 표준원가")
+                    createStandardCost("STD-005", currentMonth, businessUnits.get(4), null, StandardCostBasisType.BUSINESS_UNIT, "13800000", "디지털혁신본부 표준원가"),
+                    createStandardCost("STD-006", currentMonth, businessUnits.get(0), projects.get("PRJ-001"), StandardCostBasisType.PROJECT, "3500000", "원가 기준 정비 프로젝트 표준원가"),
+                    createStandardCost("STD-007", currentMonth, businessUnits.get(1), projects.get("PRJ-005"), StandardCostBasisType.PROJECT, "2900000", "고객사 단가 협상 프로젝트 표준원가"),
+                    createStandardCost("STD-008", currentMonth, businessUnits.get(2), null, StandardCostBasisType.EMPLOYEE, "1800000", "운영 인력 기준 표준원가"),
+                    createStandardCost("STD-009", currentMonth, businessUnits.get(3), null, StandardCostBasisType.EMPLOYEE, "1500000", "재무 인력 기준 표준원가"),
+                    createStandardCost("STD-010", currentMonth, businessUnits.get(4), projects.get("PRJ-017"), StandardCostBasisType.PROJECT, "4200000", "회계 자동화 플랫폼 프로젝트 표준원가")
             ));
 
             saveEntry(costEntryRepository, projects.get("PRJ-001"), LocalDate.now().minusDays(8),

@@ -8,6 +8,7 @@ import com.hongseonah.costmanager.domain.project.repository.ProjectRepository;
 import com.hongseonah.costmanager.domain.standardcost.dto.request.StandardCostCreateRequest;
 import com.hongseonah.costmanager.domain.standardcost.dto.request.StandardCostUpdateRequest;
 import com.hongseonah.costmanager.domain.standardcost.dto.response.StandardCostResponse;
+import com.hongseonah.costmanager.domain.standardcost.entity.StandardCostBasisType;
 import com.hongseonah.costmanager.domain.standardcost.entity.StandardCostPlan;
 import com.hongseonah.costmanager.domain.standardcost.repository.StandardCostPlanRepository;
 import java.time.YearMonth;
@@ -50,11 +51,14 @@ public class StandardCostServiceImpl implements StandardCostService {
         if (planRepository.existsByStandardCode(request.standardCode())) {
             throw new BusinessException("이미 등록된 표준원가 코드입니다.");
         }
+        BusinessUnit businessUnit = getBusinessUnit(request.businessUnitId());
+        CostProject project = getProject(request.projectId());
+        validateBasisRelation(request.basisType(), businessUnit, project);
         StandardCostPlan plan = new StandardCostPlan();
         plan.setStandardCode(request.standardCode());
         plan.setPlanMonth(parseMonth(request.planMonth()).toString());
-        plan.setBusinessUnit(getBusinessUnit(request.businessUnitId()));
-        plan.setProject(getProject(request.projectId()));
+        plan.setBusinessUnit(businessUnit);
+        plan.setProject(project);
         plan.setBasisType(request.basisType());
         plan.setStandardAmount(request.standardAmount());
         plan.setMemo(request.memo());
@@ -65,9 +69,12 @@ public class StandardCostServiceImpl implements StandardCostService {
     @Transactional
     public StandardCostResponse update(Long id, StandardCostUpdateRequest request) {
         StandardCostPlan plan = getPlan(id);
+        BusinessUnit businessUnit = getBusinessUnit(request.businessUnitId());
+        CostProject project = getProject(request.projectId());
+        validateBasisRelation(request.basisType(), businessUnit, project);
         plan.setPlanMonth(parseMonth(request.planMonth()).toString());
-        plan.setBusinessUnit(getBusinessUnit(request.businessUnitId()));
-        plan.setProject(getProject(request.projectId()));
+        plan.setBusinessUnit(businessUnit);
+        plan.setProject(project);
         plan.setBasisType(request.basisType());
         plan.setStandardAmount(request.standardAmount());
         plan.setMemo(request.memo());
@@ -96,6 +103,22 @@ public class StandardCostServiceImpl implements StandardCostService {
         }
         return projectRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("프로젝트를 찾을 수 없습니다."));
+    }
+
+    private void validateBasisRelation(StandardCostBasisType basisType,
+                                       BusinessUnit businessUnit,
+                                       CostProject project) {
+        if (basisType == StandardCostBasisType.PROJECT && project == null) {
+            throw new BusinessException("프로젝트 기준 표준원가는 프로젝트를 선택해야 합니다.");
+        }
+        if (basisType == StandardCostBasisType.BUSINESS_UNIT && project != null) {
+            throw new BusinessException("본부 기준 표준원가는 프로젝트를 선택하지 않습니다.");
+        }
+        if (project != null
+                && project.getBusinessUnit() != null
+                && !project.getBusinessUnit().getId().equals(businessUnit.getId())) {
+            throw new BusinessException("선택한 프로젝트의 본부와 표준원가 본부가 일치하지 않습니다.");
+        }
     }
 
     private YearMonth parseMonth(String month) {

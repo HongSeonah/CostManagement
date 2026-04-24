@@ -57,10 +57,16 @@ public class InternalTransferServiceImpl implements InternalTransferService {
         InternalTransfer transfer = new InternalTransfer();
         transfer.setTransferCode(request.transferCode());
         transfer.setTransferDate(request.transferDate());
-        transfer.setSourceBusinessUnit(getBusinessUnit(request.sourceBusinessUnitId()));
-        transfer.setTargetBusinessUnit(getBusinessUnit(request.targetBusinessUnitId()));
-        transfer.setSourceProject(getProject(request.sourceProjectId()));
-        transfer.setTargetProject(getProject(request.targetProjectId()));
+        BusinessUnit sourceBusinessUnit = getBusinessUnit(request.sourceBusinessUnitId());
+        BusinessUnit targetBusinessUnit = getBusinessUnit(request.targetBusinessUnitId());
+        CostProject sourceProject = getProject(request.sourceProjectId());
+        CostProject targetProject = getProject(request.targetProjectId());
+        validateProjectOwnership(sourceBusinessUnit, sourceProject, "출발");
+        validateProjectOwnership(targetBusinessUnit, targetProject, "도착");
+        transfer.setSourceBusinessUnit(sourceBusinessUnit);
+        transfer.setTargetBusinessUnit(targetBusinessUnit);
+        transfer.setSourceProject(sourceProject);
+        transfer.setTargetProject(targetProject);
         transfer.setAmount(request.amount());
         transfer.setMemo(request.memo());
         return InternalTransferResponse.from(transferRepository.save(transfer));
@@ -74,10 +80,16 @@ public class InternalTransferServiceImpl implements InternalTransferService {
         }
         InternalTransfer transfer = getTransfer(id);
         transfer.setTransferDate(request.transferDate());
-        transfer.setSourceBusinessUnit(getBusinessUnit(request.sourceBusinessUnitId()));
-        transfer.setTargetBusinessUnit(getBusinessUnit(request.targetBusinessUnitId()));
-        transfer.setSourceProject(getProject(request.sourceProjectId()));
-        transfer.setTargetProject(getProject(request.targetProjectId()));
+        BusinessUnit sourceBusinessUnit = getBusinessUnit(request.sourceBusinessUnitId());
+        BusinessUnit targetBusinessUnit = getBusinessUnit(request.targetBusinessUnitId());
+        CostProject sourceProject = getProject(request.sourceProjectId());
+        CostProject targetProject = getProject(request.targetProjectId());
+        validateProjectOwnership(sourceBusinessUnit, sourceProject, "출발");
+        validateProjectOwnership(targetBusinessUnit, targetProject, "도착");
+        transfer.setSourceBusinessUnit(sourceBusinessUnit);
+        transfer.setTargetBusinessUnit(targetBusinessUnit);
+        transfer.setSourceProject(sourceProject);
+        transfer.setTargetProject(targetProject);
         transfer.setAmount(request.amount());
         transfer.setMemo(request.memo());
         return InternalTransferResponse.from(transferRepository.save(transfer));
@@ -105,6 +117,15 @@ public class InternalTransferServiceImpl implements InternalTransferService {
         }
         return projectRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("프로젝트를 찾을 수 없습니다."));
+    }
+
+    private void validateProjectOwnership(BusinessUnit businessUnit, CostProject project, String label) {
+        if (project == null || project.getBusinessUnit() == null) {
+            return;
+        }
+        if (!project.getBusinessUnit().getId().equals(businessUnit.getId())) {
+            throw new BusinessException(label + " 본부와 연결된 프로젝트가 일치하지 않습니다.");
+        }
     }
 
     private YearMonth parseMonth(String month) {
